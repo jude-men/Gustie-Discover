@@ -1,0 +1,118 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  username  String   @unique
+  firstName String
+  lastName  String
+  isActive  Boolean  @default(true)
+  role      UserRole @default(STUDENT)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  activities Activity[]
+  comments   Comment[]
+  likes      Like[]
+
+  @@map("users")
+}
+
+model Category {
+  id          String @id @default(cuid())
+  name        String @unique
+  description String
+  color       String // Hex color code for UI
+  icon        String // Icon identifier
+
+  // Relations
+  activities Activity[]
+
+  @@map("categories")
+}
+
+model Activity {
+  id          String       @id @default(cuid())
+  title       String
+  description String
+  location    String?
+  startTime   DateTime
+  endTime     DateTime?
+  isRecurring Boolean      @default(false)
+  status      ActivityStatus @default(UPCOMING)
+  imageUrl    String?
+  maxAttendees Int?
+  tags        String   // JSON string of tags for better searchability
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  // Foreign keys
+  authorId   String
+  categoryId String
+
+  // Relations
+  author   User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  category Category @relation(fields: [categoryId], references: [id])
+  comments Comment[]
+  likes    Like[]
+
+  @@map("activities")
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Foreign keys
+  activityId String
+  authorId   String
+
+  // Relations
+  activity Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  author   User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@map("comments")
+}
+
+model Like {
+  id String @id @default(cuid())
+
+  // Foreign keys
+  activityId String
+  userId     String
+
+  // Relations
+  activity Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Ensure one like per user per activity
+  @@unique([activityId, userId])
+  @@map("likes")
+}
+
+enum UserRole {
+  STUDENT
+  STUDENT_SENATE
+  ADMIN
+}
+
+enum ActivityStatus {
+  UPCOMING
+  ONGOING
+  COMPLETED
+  CANCELLED
+}
